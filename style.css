@@ -8,6 +8,9 @@ body{
   text-align: center;
 }
 .breadcrumbs {
+  position: fixed;
+  background: #FFF;
+  top: 0;
   font-size: small;
   text-align: center;
   width: 100%;

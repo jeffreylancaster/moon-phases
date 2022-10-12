@@ -1,0 +1,285 @@
+<!DOCTYPE HTML>
+<meta charset="utf-8">
+<html>
+	<head>
+		<style>
+/* from:  https://bl.ocks.org/micahstubbs/89c6bd879d64aa511372064c6cf85711 */
+body {
+  font: 10px sans-serif;
+  shape-rendering: crispEdges;
+}
+
+.day {
+  fill: none;
+  stroke: #CCC;
+  /*opacity: 0.2;*/
+}
+
+.month {
+  fill: none;
+  stroke: #000;
+  stroke-width: 2px;
+}
+
+.RdYlGn .q0-11{fill:rgb(165,0,38)}
+.RdYlGn .q1-11{fill:rgb(215,48,39)}
+.RdYlGn .q2-11{fill:rgb(244,109,67)}
+.RdYlGn .q3-11{fill:rgb(253,174,97)}
+.RdYlGn .q4-11{fill:rgb(254,224,139)}
+.RdYlGn .q5-11{fill:rgb(255,255,191)}
+.RdYlGn .q6-11{fill:rgb(217,239,139)}
+.RdYlGn .q7-11{fill:rgb(166,217,106)}
+.RdYlGn .q8-11{fill:rgb(102,189,99)}
+.RdYlGn .q9-11{fill:rgb(26,152,80)}
+.RdYlGn .q10-11{fill:rgb(0,104,55)}
+
+.year{
+	height: 140px;
+	width:  960px;
+}
+.moon{
+	stroke: #333;
+	stroke-width: 0.5px;
+}
+.moon.waxing{
+	fill: #FFF;
+}
+.moon.waning{
+	fill: #000;
+}
+.right.waxing{
+	fill: #000;
+}
+.right.waning{
+	fill: #FFF;
+}
+.middleEllipse.crescent{
+	fill: #000;
+}
+.middleEllipse.gibbous{
+	fill: #FFF;
+}
+
+		</style>
+	</head>
+	<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js" integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+// adapted from https://jivebay.com/calculating-the-moon-phase/ and http://www.voidware.com/moon_phase.htm
+
+function moon_phase(date){
+	var d = new Date(date);
+	var year = d.getFullYear();
+	var month = d.getMonth()+1;
+	var day = d.getDate();
+
+	// set variables
+	var c = e = jd = b = 0;
+
+	var returnObj = {
+		'name': '',
+		'code': '',
+		'percent': null
+	}
+
+	var phase_names = ['New Moon', 'Waxing Crescent Moon', 'Quarter Moon', 'Waxing Gibbous Moon', 'Full Moon', 'Waning Gibbous Moon', 'Last Quarter Moon', 'Waning Crescent Moon'];
+	var phase_codes = ['NL', 'CA', '1A', '2A', '3A', '4A', '5A', '6A', '7A', 'PL', '7D', '6D', '5D', '4D', '3D', '2D', '1D', 'CD'];
+	
+	// adjust month
+	if(month < 3){
+		year--;
+		month += 12;
+	}
+	
+	// increment the month by 1
+	month++;
+
+	c = 365.25 * year;
+	e = 30.6 * month;
+	jd = c + e + day - 694039.09; // jd is total days elapsed
+	jd = jd/29.5305882; //divide by the moon cycle
+	b = Math.floor(jd); //int(jd) -> b, take integer part of jd
+	jd -= b; //subtract integer part to leave fractional part of original jd
+	
+
+	var bPN = Math.round(jd * phase_names.length); //scale fraction from 0 to phase_names.length and round
+	if(bPN >= phase_names.length){
+		bPN = 0; // 0 and phase_names.length are the same so turn phase_names.length into 0
+	}
+	returnObj.name = phase_names[bPN];
+
+	var bPC = Math.round(jd * phase_codes.length); //scale fraction from 0 to phase_codes.length and round
+	if(bPC >= phase_codes.length){
+		bPC = 0; // 0 and phase_codes.length are the same so turn phase_codes.length into 0
+	}
+	returnObj.code = phase_codes[bPC];
+
+	var bPercent = 2*(0.5-Math.abs(jd-0.5));
+	returnObj.percent = bPercent; 
+		// 0 <= percent <= 0.5 (crescent); 0.5 <= percent <= 1 (gibbous) 
+
+	returnObj.jd = jd;
+		// 0 <= jd <= 0.5 (waxing); 0.5 < jd <= 1 (waning)
+
+	return returnObj;
+}
+
+var d = new Date();
+console.log(moon_phase( d )); // today
+
+console.log(moon_phase(new Date(1982, 9, 21))); // Waxing Crescent
+console.log(moon_phase(new Date(1984, 2, 21))); // Waning Gibbous
+
+// from: https://www.yogihosting.com/jquery-infinite-scroll/
+// troubleshooting: https://www.viralpatel.net/jquery-window-height-incorrect/
+var buffer = 100;
+var numToAdd = 3;
+
+$(document).ready(function(){
+	// add first 10 years
+	var currentYear = new Date().getFullYear()
+	for(i = currentYear; i >= currentYear-10; i--){
+		$("body").append(`<div class="year" id="y${i}" data-year=${i}></div>`);
+		drawCalendar(i);
+	}
+
+	// what happens when scrolling (add more years)
+	$(window).scroll(function () {
+		// End of the document reached?
+		if ($(window).scrollTop() < buffer){
+			var firstY = $(".year").first().attr("data-year");
+			for(i = 1; i <= numToAdd; i++){
+				var divYear = parseInt($(".year").first().attr("data-year"))+1;
+				$(".year").first().before(`<div class="year" id="y${divYear}" data-year=${divYear}></div>`);
+				drawCalendar(divYear);
+			}
+			// remove last numToAdd?
+		}
+		if ($(document).height() - $(window).height() - buffer < $(window).scrollTop()) {
+			var lastY = $(".year").last().attr("data-year");
+			for(i = numToAdd; i >= 1; i--){
+				var divYear = parseInt($(".year").last().attr("data-year"))-1;
+				$(".year").last().after(`<div class="year" id="y${divYear}" data-year=${divYear}></div>`);
+				drawCalendar(divYear);
+			}
+			// remove first numToAdd?
+		}
+	});
+})
+
+// from: https://bl.ocks.org/micahstubbs/89c6bd879d64aa511372064c6cf85711
+var width = 960,
+    height = 136,
+    cellSize = 17; // cell size
+
+var percent = d3.format(".1%"),
+    format = d3.timeFormat("%Y-%m-%d");
+
+var color = d3.scaleQuantize()
+    .domain([-.05, .05])
+    .range(d3.range(11).map(function(d) { return "q" + d + "-11"; }));
+
+function drawCalendar(divId){
+	var calendarYear = divId;
+
+	var svg = d3.select("#y"+divId).selectAll("svg") // was .select("body")
+	    .data(d3.range(calendarYear, calendarYear+1))
+	  .enter().append("svg")
+	    .attr("width", width)
+	    .attr("height", height)
+	    .attr("class", "RdYlGn")
+	  .append("g")
+	    .attr("transform", "translate(" + ((width - cellSize * 53) / 2) + "," + (height - cellSize * 7 - 1) + ")");
+
+	// add the year
+	svg.append("text")
+	    .attr("transform", "translate(-6," + cellSize * 3.5 + ")rotate(-90)")
+	    .style("text-anchor", "middle")
+	    .text(function(d) { return d; });
+
+	// add a group for each day
+	var dayBox = svg.selectAll(".dayBox")
+		.data(function(d) { return d3.timeDays(new Date(d, 0, 1), new Date(d + 1, 0, 1)); })
+	  .enter().append("g")
+		.attr("class", ".dayBox")
+		.attr("transform", function(d){ return `translate(${d3.timeWeek.count(d3.timeYear(d), d) * cellSize}, ${d.getDay() * cellSize})`})
+		.datum(format);
+
+	// draw the background circle
+	var circle = dayBox.append("circle")
+	    .attr("class", function(d){
+	    	return (moon_phase(d).jd <= 0.5) ? "moon waxing" : "moon waning"
+	    }) // change class based on waxing/waning
+	    .attr("r", (cellSize/2)-2)
+	    .attr("cx", cellSize/2)
+	    .attr("cy", cellSize/2);
+
+	const arcGenerator = d3.arc()
+		.outerRadius((cellSize/2)-2)
+		.innerRadius(0)
+		.startAngle(0)
+		.endAngle(Math.PI);
+
+	// overlay a half arc
+	var halfMoon = dayBox.append("path")
+	    .attr("class", function(d){
+	    	return (moon_phase(d).jd <= 0.5 ) ? "right waxing" : "right waning"
+	    }) // add class based on phase
+	    .attr("transform", `translate(${ cellSize/2 }, ${ cellSize/2 })`)
+	    .attr("d", arcGenerator());
+
+	// overlay an ellipse
+	var middleEllipse = dayBox.append("ellipse")
+	    .attr("class", function(d){
+	    	return (moon_phase(d).percent <= 0.5) ? "middleEllipse crescent" : "middleEllipse gibbous";
+	    }) // add class based on phase
+	    .attr("rx", function(d){
+	    	var full = (cellSize/2)-2;
+	    	return full * 2 * Math.abs(moon_phase(d).percent - 0.5);
+	    }) // scale in x-direction here
+	    .attr("ry", (cellSize/2)-2)
+	    .attr("cx", cellSize/2)
+	    .attr("cy", cellSize/2);
+
+	// overlay the day rectangle
+	var rect = dayBox.append("rect")
+	    .attr("class", "day")
+	    .attr("width", cellSize)
+	    .attr("height", cellSize)
+	    .attr("x", 0)
+	    .attr("y", 0);
+
+	// add the title
+	dayBox.append("title")
+	    .text(function(d) {
+	    	var moonPhase = moon_phase(d);
+	    	// return `${ d }, ${ moonPhase.name }, ${ moonPhase.percent }, ${ moonPhase.code }, ${ moonPhase.jd }`;
+	    	return `${ d }, ${ moonPhase.name }`;
+	    });
+
+	// add the month outlines
+	svg.selectAll(".month")
+	    .data(function(d) { return d3.timeMonths(new Date(d, 0, 1), new Date(d + 1, 0, 1)); })
+	  .enter().append("path")
+	    .attr("class", "month")
+	    .attr("d", monthPath);
+}
+
+// to draw the path around each month
+function monthPath(t0) {
+  var t1 = new Date(t0.getFullYear(), t0.getMonth() + 1, 0),
+      d0 = t0.getDay(), w0 = d3.timeWeek.count(d3.timeYear(t0), t0)
+      d1 = t1.getDay(), w1 = d3.timeWeek.count(d3.timeYear(t1), t1);
+  return "M" + (w0 + 1) * cellSize + "," + d0 * cellSize
+      + "H" + w0 * cellSize + "V" + 7 * cellSize
+      + "H" + w1 * cellSize + "V" + (d1 + 1) * cellSize
+      + "H" + (w1 + 1) * cellSize + "V" + 0
+      + "H" + (w0 + 1) * cellSize + "Z";
+}
+
+
+</script>
+</body>
+</html>

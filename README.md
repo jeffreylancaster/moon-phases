@@ -69,12 +69,12 @@ function moon_phase(date){
 ```
 
 The object that is returned contains a few moon phase metrics:
-```json
+```javascript
 {
-	"name": String,
-	"code": String,
-	"percent": Number,
-	"jd": Number
+	"name": "string",
+	"code": "string",
+	"percent": float,
+	"jd": float
 }
 ```
 
